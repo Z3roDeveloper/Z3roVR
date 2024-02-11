@@ -1,0 +1,99 @@
+handlers.OnUserCreated = function(args) {
+    var Update = server.UpdateUserData({
+        "PlayFabId": currentPlayerId,
+        "Data": {
+            "CosmeticData": ""
+        }
+    });
+}
+
+handlers.UpdateUserCosmeticData = function(args) {
+    var item = args.ItemToUpdate;
+    var enabled = args.Enabled;
+    var id = args.PID;
+
+    if (id != currentPlayerId) {
+        return {
+            result: 0
+        };
+    }
+
+    var ppinfo = server.GetUserData({
+        PlayFabId: currentPlayerId,
+        Keys: ["CosmeticData"]
+    });
+
+    var currentvalue = ppinfo.Data.CosmeticData.Value;
+
+    var allowneditems = GetUserCosmetics(id);
+
+    if (allowneditems.includes(item)) {
+        if (enabled == true) {
+            currentvalue += "." + item;
+        } else {
+            currentvalue = RemoveFromConcatList(currentvalue, item);
+        }
+
+        var Update = server.UpdateUserData({
+            "PlayFabId": currentPlayerId,
+            "Data": {
+                "CosmeticData": currentvalue
+            }
+        });
+
+        return {
+            result: 0
+        };
+    }
+
+    return {
+        result: 1
+    };
+}
+
+handlers.GetUserCosmeticData = function(args) {
+    var id = args.PID;
+    var concatlist = GetUserCosmetics(id);
+
+    return {
+        ConcatList: concatlist
+    };
+}
+
+
+// NON CLIENT CALLED
+
+function GetUserCosmetics(playerID) {
+    var getInventoryResult = server.GetUserInventory({
+        PlayFabId: playerID
+    });
+
+    var items = "";
+
+    if (getInventoryResult && getInventoryResult.Inventory) {
+        var inventory = getInventoryResult.Inventory;
+
+        for (var i = 0; i < inventory.length; i++) {
+            var item = inventory[i];
+
+            items += item.ItemId;
+
+            if (i < inventory.length - 1) {
+                items += ".";
+            }
+        }
+    }
+
+    return items;
+}
+
+function RemoveFromConcatList(cosmetics, itemToRemove) {
+    var cosmeticsArray = cosmetics.split('.');
+
+    var index = cosmeticsArray.indexOf(itemToRemove);
+    if (index !== -1) {
+        cosmeticsArray.splice(index, 1);
+    }
+
+    return cosmeticsArray.join('.');
+}
